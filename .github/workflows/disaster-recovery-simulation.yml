@@ -24,8 +24,8 @@ on:
       recovery_point_age_minutes:
         description: Synthetic backup age used by RPO gates
         required: true
-        default: 5
-        type: number
+        default: "5"
+        type: string
       confirmation:
         description: Type SIMULATE to confirm
         required: true

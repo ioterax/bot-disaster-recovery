@@ -3,15 +3,15 @@ name: Simulate - IAM recovery
 on:
   workflow_call:
     inputs:
-      snapshot_age_minutes: { required: true, type: number }
+      snapshot_age_minutes: { required: true, type: string }
       confirmation: { required: true, type: string }
   workflow_dispatch:
     inputs:
       snapshot_age_minutes:
         description: Synthetic snapshot age
         required: true
-        default: 5
-        type: number
+        default: "5"
+        type: string
       confirmation:
         description: Type SIMULATE to confirm
         required: true
@@ -24,6 +24,9 @@ jobs:
   iam:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    env:
+      DR_CONFIRMATION: ${{ inputs.confirmation }}
+      DR_SNAPSHOT_AGE_MINUTES: ${{ inputs.snapshot_age_minutes }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -31,8 +34,9 @@ jobs:
       - name: Enforce IAM and RPO guardrails
         run: |
           node --run check:runtime
-          test "${{ inputs.confirmation }}" = "SIMULATE" || { echo "confirmation must equal SIMULATE" >&2; exit 1; }
-          (( ${{ inputs.snapshot_age_minutes }} <= 15 )) || { echo "snapshot exceeds RPO" >&2; exit 1; }
+          test "$DR_CONFIRMATION" = "SIMULATE" || { echo "confirmation must equal SIMULATE" >&2; exit 1; }
+          [[ "$DR_SNAPSHOT_AGE_MINUTES" =~ ^[0-9]+$ ]] || { echo "snapshot age must be a non-negative integer" >&2; exit 1; }
+          (( DR_SNAPSHOT_AGE_MINUTES <= 15 )) || { echo "snapshot exceeds RPO" >&2; exit 1; }
       - name: Simulate discovery, normalization and key exclusion
         run: |
           sleep 3

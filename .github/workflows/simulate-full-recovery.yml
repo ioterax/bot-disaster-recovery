@@ -4,7 +4,7 @@ on:
   workflow_call:
     inputs:
       recovery_project: { required: true, type: string }
-      recovery_point_age_minutes: { required: true, type: number }
+      recovery_point_age_minutes: { required: true, type: string }
       confirmation: { required: true, type: string }
   workflow_dispatch:
     inputs:
@@ -16,8 +16,8 @@ on:
       recovery_point_age_minutes:
         description: Synthetic backup age
         required: true
-        default: 5
-        type: number
+        default: "5"
+        type: string
       confirmation:
         description: Type SIMULATE to confirm
         required: true

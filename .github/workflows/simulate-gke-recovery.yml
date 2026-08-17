@@ -25,6 +25,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
+      DR_CONFIRMATION: ${{ inputs.confirmation }}
       DR_TARGET: ${{ inputs.recovery_cluster }}
     steps:
       - uses: actions/checkout@v4
@@ -33,7 +34,7 @@ jobs:
       - name: Enforce cluster guardrails
         run: |
           node --run check:runtime
-          test "${{ inputs.confirmation }}" = "SIMULATE" || { echo "confirmation must equal SIMULATE" >&2; exit 1; }
+          test "$DR_CONFIRMATION" = "SIMULATE" || { echo "confirmation must equal SIMULATE" >&2; exit 1; }
           [[ "$DR_TARGET" =~ -dr-sandbox$ ]] || { echo "cluster must end with -dr-sandbox" >&2; exit 1; }
       - name: Simulate network, quota and budget preflight
         run: |
@@ -47,4 +48,3 @@ jobs:
         run: |
           sleep 3
           echo "RBAC, policies, CSI drivers and cluster health validated."
-

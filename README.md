@@ -1,4 +1,4 @@
-# Ioterax Disaster Recovery Bot
+# Disaster Recovery Bot
 
 [![Terraform drift simulation](https://github.com/ioterax/bot-disaster-recovery/actions/workflows/simulate-terraform-drift.yml/badge.svg)](https://github.com/ioterax/bot-disaster-recovery/actions/workflows/simulate-terraform-drift.yml)
 [![Main DR simulation](https://github.com/ioterax/bot-disaster-recovery/actions/workflows/disaster-recovery-simulation.yml/badge.svg)](https://github.com/ioterax/bot-disaster-recovery/actions/workflows/disaster-recovery-simulation.yml)
@@ -92,16 +92,16 @@ They verify that simulations stay manual and non-privileged, dangerous feature t
 
 Every public entrypoint is manual through `workflow_dispatch` and requires the literal confirmation `SIMULATE`. Specialized workflows also expose `workflow_call`, allowing the main workflow and the full-recovery workflow to compose them without duplicating recovery logic. They use `sleep 3` to represent real operations while the implementation is still a harmless scaffold.
 
-| Workflow | Scenario | Simulated phases |
-| --- | --- | --- |
-| `disaster-recovery-simulation.yml` | Main scenario router | selects one conditional path and delegates it |
-| `simulate-terraform-drift.yml` | Terraform resource deletion | checkout, init, plan, classify and report |
-| `simulate-gcp-project-loss.yml` | GCP project loss | guardrails, foundation, APIs, state and handoff |
-| `simulate-iam-recovery.yml` | IAM backup and restore | discover, redact, encrypt, verify and restore |
-| `simulate-database-recovery.yml` | Database loss/corruption | select recovery point, restore to a new instance and validate data |
-| `simulate-gke-recovery.yml` | GKE cluster loss | network, cluster, identity, policy, FluxCD and workload health |
-| `simulate-flux-bootstrap.yml` | Kubernetes/FluxCD loss | cluster readiness, bootstrap, reconcile and health |
-| `simulate-full-recovery.yml` | Full project loss | project, IAM, Terraform, database, GKE, FluxCD, workloads and evidence |
+| Workflow                           | Scenario                    | Simulated phases                                                       |
+| ---------------------------------- | --------------------------- | ---------------------------------------------------------------------- |
+| `disaster-recovery-simulation.yml` | Main scenario router        | selects one conditional path and delegates it                          |
+| `simulate-terraform-drift.yml`     | Terraform resource deletion | checkout, init, plan, classify and report                              |
+| `simulate-gcp-project-loss.yml`    | GCP project loss            | guardrails, foundation, APIs, state and handoff                        |
+| `simulate-iam-recovery.yml`        | IAM backup and restore      | discover, redact, encrypt, verify and restore                          |
+| `simulate-database-recovery.yml`   | Database loss/corruption    | select recovery point, restore to a new instance and validate data     |
+| `simulate-gke-recovery.yml`        | GKE cluster loss            | network, cluster, identity, policy, FluxCD and workload health         |
+| `simulate-flux-bootstrap.yml`      | Kubernetes/FluxCD loss      | cluster readiness, bootstrap, reconcile and health                     |
+| `simulate-full-recovery.yml`       | Full project loss           | project, IAM, Terraform, database, GKE, FluxCD, workloads and evidence |
 
 Run one from **Actions → select workflow → Run workflow**. Use only synthetic, non-sensitive data. These simulations do not authenticate to GCP and do not invoke Terraform or FluxCLIs.
 

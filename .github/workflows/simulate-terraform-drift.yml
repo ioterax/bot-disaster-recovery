@@ -25,6 +25,9 @@ jobs:
   terraform:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    env:
+      DR_CONFIRMATION: ${{ inputs.confirmation }}
+      DR_TERRAFORM_SCENARIO: ${{ inputs.scenario }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -32,7 +35,7 @@ jobs:
       - name: Enforce read-only guardrails
         run: |
           node --run check:runtime
-          test "${{ inputs.confirmation }}" = "SIMULATE" || { echo "confirmation must equal SIMULATE" >&2; exit 1; }
+          test "$DR_CONFIRMATION" = "SIMULATE" || { echo "confirmation must equal SIMULATE" >&2; exit 1; }
       - name: Simulate immutable checkout and backend init
         run: |
           sleep 3
@@ -40,5 +43,4 @@ jobs:
       - name: Simulate refresh-only plan and classification
         run: |
           sleep 3
-          echo "${{ inputs.scenario }} classified; zero mutations permitted."
-
+          echo "$DR_TERRAFORM_SCENARIO classified; zero mutations permitted."

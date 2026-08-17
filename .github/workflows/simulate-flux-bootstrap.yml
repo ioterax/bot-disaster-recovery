@@ -25,6 +25,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
+      DR_CONFIRMATION: ${{ inputs.confirmation }}
       DR_GITOPS_PATH: ${{ inputs.gitops_path }}
     steps:
       - uses: actions/checkout@v4
@@ -33,7 +34,7 @@ jobs:
       - name: Enforce GitOps guardrails
         run: |
           node --run check:runtime
-          test "${{ inputs.confirmation }}" = "SIMULATE" || { echo "confirmation must equal SIMULATE" >&2; exit 1; }
+          test "$DR_CONFIRMATION" = "SIMULATE" || { echo "confirmation must equal SIMULATE" >&2; exit 1; }
           [[ "$DR_GITOPS_PATH" != /* && "$DR_GITOPS_PATH" != *..* ]] || { echo "unsafe GitOps path" >&2; exit 1; }
       - name: Simulate bootstrap at an immutable revision
         run: |
@@ -43,4 +44,3 @@ jobs:
         run: |
           sleep 3
           echo "Kustomizations, Helm releases and workloads converged."
-

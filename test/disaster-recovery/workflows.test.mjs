@@ -81,3 +81,40 @@ test('the main workflow conditionally routes every scenario', async () => {
     assert.match(main, new RegExp(`inputs\\.scenario == '${scenario}'`));
   }
 });
+
+test('nested RPO inputs use one consistent string contract', async () => {
+  const workflows = await loadWorkflows();
+
+  for (const name of [
+    'disaster-recovery-simulation.yml',
+    'simulate-full-recovery.yml',
+    'simulate-database-recovery.yml',
+    'simulate-iam-recovery.yml',
+  ]) {
+    const content = workflows.find((workflow) => workflow.name === name)?.content;
+    assert.ok(content, `${name} must exist`);
+    assert.doesNotMatch(content, /(?:recovery_point|snapshot)_age_minutes:[^\n]*type: number/);
+    assert.doesNotMatch(content, /^\s+type: number$/m);
+  }
+});
+
+test('untrusted inputs are not interpolated directly into shell scripts', async () => {
+  for (const { name, content } of await loadWorkflows()) {
+    const lines = content.split('\n');
+
+    for (let index = 0; index < lines.length; index += 1) {
+      const runBlock = lines[index].match(/^(\s*)run: \|$/);
+      if (!runBlock) continue;
+
+      const indentation = runBlock[1].length;
+      for (index += 1; index < lines.length; index += 1) {
+        const line = lines[index];
+        if (line.trim() && line.search(/\S/) <= indentation) {
+          index -= 1;
+          break;
+        }
+        assert.doesNotMatch(line, /\$\{\{\s*inputs\./, `${name} must pass inputs through env before shell use`);
+      }
+    }
+  }
+});
