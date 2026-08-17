@@ -1,0 +1,43 @@
+name: Simulate - IAM recovery
+
+on:
+  workflow_call:
+    inputs:
+      snapshot_age_minutes: { required: true, type: number }
+      confirmation: { required: true, type: string }
+  workflow_dispatch:
+    inputs:
+      snapshot_age_minutes:
+        description: Synthetic snapshot age
+        required: true
+        default: 5
+        type: number
+      confirmation:
+        description: Type SIMULATE to confirm
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  iam:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 26.6.0 }
+      - name: Enforce IAM and RPO guardrails
+        run: |
+          node --run check:runtime
+          test "${{ inputs.confirmation }}" = "SIMULATE" || { echo "confirmation must equal SIMULATE" >&2; exit 1; }
+          (( ${{ inputs.snapshot_age_minutes }} <= 15 )) || { echo "snapshot exceeds RPO" >&2; exit 1; }
+      - name: Simulate discovery, normalization and key exclusion
+        run: |
+          sleep 3
+          echo "IAM declarations normalized; private keys excluded."
+      - name: Simulate encryption, integrity and ordered restore
+        run: |
+          sleep 3
+          echo "Machine-only KMS snapshot verified and restored synthetically."

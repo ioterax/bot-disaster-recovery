@@ -1,0 +1,50 @@
+name: Simulate - GKE recovery
+
+on:
+  workflow_call:
+    inputs:
+      recovery_cluster: { required: true, type: string }
+      confirmation: { required: true, type: string }
+  workflow_dispatch:
+    inputs:
+      recovery_cluster:
+        description: Disposable cluster; must end with -dr-sandbox
+        required: true
+        default: ioterax-gke-dr-sandbox
+        type: string
+      confirmation:
+        description: Type SIMULATE to confirm
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  gke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      DR_TARGET: ${{ inputs.recovery_cluster }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 26.6.0 }
+      - name: Enforce cluster guardrails
+        run: |
+          node --run check:runtime
+          test "${{ inputs.confirmation }}" = "SIMULATE" || { echo "confirmation must equal SIMULATE" >&2; exit 1; }
+          [[ "$DR_TARGET" =~ -dr-sandbox$ ]] || { echo "cluster must end with -dr-sandbox" >&2; exit 1; }
+      - name: Simulate network, quota and budget preflight
+        run: |
+          sleep 3
+          echo "Private networking, secondary ranges, quota and budget validated."
+      - name: Simulate GKE and identity recovery
+        run: |
+          sleep 3
+          echo "Private GKE and Workload Identity recovered synthetically."
+      - name: Simulate policy and health gates
+        run: |
+          sleep 3
+          echo "RBAC, policies, CSI drivers and cluster health validated."
+

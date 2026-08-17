@@ -1,0 +1,46 @@
+name: Simulate - GCP project loss
+
+on:
+  workflow_call:
+    inputs:
+      recovery_project: { required: true, type: string }
+      confirmation: { required: true, type: string }
+  workflow_dispatch:
+    inputs:
+      recovery_project:
+        description: Disposable project; must end with -dr-sandbox
+        required: true
+        default: ioterax-dr-sandbox
+        type: string
+      confirmation:
+        description: Type SIMULATE to confirm
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  foundation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      DR_TARGET: ${{ inputs.recovery_project }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 26.6.0 }
+      - name: Enforce project guardrails
+        run: |
+          node --run check:runtime
+          test "${{ inputs.confirmation }}" = "SIMULATE" || { echo "confirmation must equal SIMULATE" >&2; exit 1; }
+          [[ "$DR_TARGET" =~ -dr-sandbox$ ]] || { echo "target must end with -dr-sandbox" >&2; exit 1; }
+      - name: Simulate organization, billing and labels
+        run: |
+          sleep 3
+          echo "Organization, billing, allowlist and disposable labels validated."
+      - name: Simulate project, APIs, KMS and state foundation
+        run: |
+          sleep 3
+          echo "Foundation recovered synthetically; no GCP credentials were requested."
+

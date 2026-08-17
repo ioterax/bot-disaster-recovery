@@ -1,0 +1,97 @@
+name: Simulate - Full project loss
+
+on:
+  workflow_call:
+    inputs:
+      recovery_project: { required: true, type: string }
+      recovery_point_age_minutes: { required: true, type: number }
+      confirmation: { required: true, type: string }
+  workflow_dispatch:
+    inputs:
+      recovery_project:
+        description: Disposable project; must end with -dr-sandbox
+        required: true
+        default: ioterax-dr-sandbox
+        type: string
+      recovery_point_age_minutes:
+        description: Synthetic backup age
+        required: true
+        default: 5
+        type: number
+      confirmation:
+        description: Type SIMULATE to confirm
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  foundation:
+    uses: ./.github/workflows/simulate-gcp-project-loss.yml
+    with:
+      recovery_project: ${{ inputs.recovery_project }}
+      confirmation: ${{ inputs.confirmation }}
+
+  iam:
+    needs: foundation
+    uses: ./.github/workflows/simulate-iam-recovery.yml
+    with:
+      snapshot_age_minutes: ${{ inputs.recovery_point_age_minutes }}
+      confirmation: ${{ inputs.confirmation }}
+
+  terraform:
+    needs: iam
+    uses: ./.github/workflows/simulate-terraform-drift.yml
+    with:
+      scenario: state-unavailable
+      confirmation: ${{ inputs.confirmation }}
+
+  database:
+    needs: terraform
+    uses: ./.github/workflows/simulate-database-recovery.yml
+    with:
+      restore_target: ioterax-database-dr-restore
+      recovery_point_age_minutes: ${{ inputs.recovery_point_age_minutes }}
+      confirmation: ${{ inputs.confirmation }}
+
+  gke:
+    needs: database
+    uses: ./.github/workflows/simulate-gke-recovery.yml
+    with:
+      recovery_cluster: ioterax-gke-dr-sandbox
+      confirmation: ${{ inputs.confirmation }}
+
+  flux:
+    needs: gke
+    uses: ./.github/workflows/simulate-flux-bootstrap.yml
+    with:
+      gitops_path: clusters/recovery
+      confirmation: ${{ inputs.confirmation }}
+
+  evidence:
+    needs: [foundation, iam, terraform, database, gke, flux]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Publish full recovery evidence
+        run: |
+          sleep 3
+          {
+            echo "## Full project-loss simulation"
+            echo "- Order: foundation → IAM → Terraform → database → GKE → FluxCD"
+            echo "- RTO/RPO gates: passed synthetically"
+            echo "- External changes: none"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  cleanup:
+    needs: [foundation, iam, terraform, database, gke, flux]
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify cleanup
+        run: |
+          sleep 3
+          echo "Nothing to clean: no external resources were created."
+      - name: Preserve failure state
+        if: ${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') }}
+        run: exit 1

@@ -1,0 +1,57 @@
+name: Simulate - Database recovery
+
+on:
+  workflow_call:
+    inputs:
+      restore_target: { required: true, type: string }
+      recovery_point_age_minutes: { required: true, type: number }
+      confirmation: { required: true, type: string }
+  workflow_dispatch:
+    inputs:
+      restore_target:
+        description: New instance; must end with -dr-restore
+        required: true
+        default: ioterax-database-dr-restore
+        type: string
+      recovery_point_age_minutes:
+        description: Synthetic PITR/backup age
+        required: true
+        default: 5
+        type: number
+      confirmation:
+        description: Type SIMULATE to confirm
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  database:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      DR_TARGET: ${{ inputs.restore_target }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 26.6.0 }
+      - name: Enforce restore and RPO guardrails
+        run: |
+          node --run check:runtime
+          test "${{ inputs.confirmation }}" = "SIMULATE" || { echo "confirmation must equal SIMULATE" >&2; exit 1; }
+          [[ "$DR_TARGET" =~ -dr-restore$ ]] || { echo "source overwrite forbidden: target must end with -dr-restore" >&2; exit 1; }
+          (( ${{ inputs.recovery_point_age_minutes }} <= 15 )) || { echo "recovery point exceeds RPO" >&2; exit 1; }
+      - name: Simulate backup catalog and integrity checks
+        run: |
+          sleep 3
+          echo "PITR/backup, encryption, region and checksum validated synthetically."
+      - name: Simulate isolated database restore
+        run: |
+          sleep 3
+          echo "Restored to a new synthetic instance; source was not overwritten."
+      - name: Simulate data validation
+        run: |
+          sleep 3
+          echo "Connectivity, schema checksum and read-only query validated."
+

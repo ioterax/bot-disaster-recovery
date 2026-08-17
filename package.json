@@ -1,0 +1,30 @@
+{
+  "name": "@ioterax/bot-disaster-recovery",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Plug-and-play ITSCM and Disaster Recovery as Code for Terraform, GCP, IAM and FluxCD.",
+  "keywords": [
+    "itscm",
+    "disaster-recovery",
+    "business-continuity",
+    "terraform",
+    "gcp",
+    "iam",
+    "fluxcd",
+    "gitops",
+    "github-app",
+    "rto",
+    "rpo"
+  ],
+  "engines": {
+    "node": "26.6.0"
+  },
+  "scripts": {
+    "check:runtime": "node scripts/check-runtime.mjs",
+    "test": "node --test test/disaster-recovery/*.test.mjs",
+    "test:disaster-recovery": "node --test test/disaster-recovery/*.test.mjs",
+    "test:mutation": "node scripts/manual-security-check.mjs mutation",
+    "test:pentest": "node scripts/manual-security-check.mjs pentest",
+    "test:security:owasp": "node scripts/manual-security-check.mjs owasp"
+  }
+}

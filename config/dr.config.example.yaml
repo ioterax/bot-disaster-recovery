@@ -1,0 +1,127 @@
+apiVersion: itscm.ioterax.io/v1alpha1
+kind: DisasterRecoveryPlan
+
+metadata:
+  name: organization-primary-dr
+  owner: platform-engineering
+  environment: simulation
+
+spec:
+  mode: simulation
+
+  sources:
+    - role: terraform
+      repository: ioterax/infrastructure
+      ref: refs/heads/main
+      path: terraform
+    - role: gitops
+      repository: ioterax/gitops
+      ref: refs/heads/main
+      path: clusters/production
+
+  provider:
+    type: gcp
+    organizationId: "123456789012"
+    billingAccountId: "000000-000000-000000"
+    primaryProjectId: ioterax-production
+    recoveryProjectId: ioterax-dr-sandbox
+    region: europe-west1
+    simulationGuard:
+      requiredLabels:
+        purpose: disaster-recovery-simulation
+        disposable: "true"
+
+  terraform:
+    workingDirectory: terraform
+    backend:
+      bucket: ioterax-terraform-state
+      prefix: production
+    plan:
+      refreshOnly: true
+      detailedExitCode: true
+
+  database:
+    engine: cloud-sql-postgresql
+    sourceInstance: ioterax-production-db
+    recoveryInstanceSuffix: -dr-restore
+    backup:
+      strategy: point-in-time
+      maxAgeMinutes: 15
+      crossRegion: true
+    restore:
+      overwriteSource: false
+      validateConnectivity: true
+      validateSchemaChecksum: true
+      validateReadOnlyQuery: true
+
+  gke:
+    sourceCluster: ioterax-production
+    recoveryClusterSuffix: -dr-sandbox
+    location: europe-west1
+    requirePrivateEndpoint: true
+    requireWorkloadIdentity: true
+
+  iamBackup:
+    vault:
+      provider: gcp-secret-manager
+      projectId: ioterax-security-vault
+      secretPrefix: dr-iam-snapshot
+      kmsKey: projects/ioterax-security-vault/locations/europe-west1/keyRings/dr/cryptoKeys/iam-snapshots
+    include:
+      serviceAccounts: true
+      customRoles: true
+      policyBindings: true
+      workloadIdentity: true
+    excludePrivateKeys: true
+    humanAccess: denied
+    retentionDays: 90
+
+  flux:
+    repository: ioterax/gitops
+    branch: main
+    path: clusters/recovery
+    namespace: flux-system
+
+  recovery:
+    targetRtoMinutes: 60
+    targetRpoMinutes: 15
+    approvalEnvironment: disaster-recovery
+    phases:
+      - foundation
+      - iam
+      - terraform
+      - database
+      - gke
+      - flux
+      - workloads
+      - validation
+
+  simulation:
+    cadence: "0 3 * * 0"
+    timeZone: Europe/Madrid
+    maxDurationMinutes: 120
+    cleanup: always
+
+  guardrails:
+    killSwitchEnabled: true
+    allowedRecoveryProjects:
+      - ioterax-dr-sandbox
+    requireDisposableLabels: true
+    requireImmutableSource: true
+    requireSignedEvidence: true
+    maxChangedResources: 100
+    maxDeletedResources: 0
+    maxEstimatedCostUsd: 50
+    allowOrganizationIamChanges: false
+    allowFolderIamChanges: false
+
+  features:
+    terraformDriftDetection: true
+    gcpFoundationRecovery: false
+    iamBackup: true
+    iamRestore: false
+    databaseRecovery: false
+    gkeRecovery: false
+    fluxBootstrap: false
+    periodicSimulation: false
+    realRecovery: false

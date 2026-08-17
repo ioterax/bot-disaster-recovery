@@ -1,0 +1,251 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/ioterax/bot-disaster-recovery/config/dr.config.schema.json",
+  "title": "Ioterax Disaster Recovery Plan",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["apiVersion", "kind", "metadata", "spec"],
+  "properties": {
+    "apiVersion": { "const": "itscm.ioterax.io/v1alpha1" },
+    "kind": { "const": "DisasterRecoveryPlan" },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "owner", "environment"],
+      "properties": {
+        "name": { "$ref": "#/$defs/dnsLabel" },
+        "owner": { "type": "string", "minLength": 1 },
+        "environment": { "enum": ["simulation", "production"] }
+      }
+    },
+    "spec": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mode", "sources", "provider", "terraform", "database", "gke", "iamBackup", "flux", "recovery", "simulation", "guardrails", "features"],
+      "properties": {
+        "mode": { "enum": ["simulation", "recovery"] },
+        "sources": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["role", "repository", "ref", "path"],
+            "properties": {
+              "role": { "enum": ["terraform", "gitops"] },
+              "repository": { "type": "string", "pattern": "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$" },
+              "ref": { "type": "string", "pattern": "^refs/(heads|tags)/.+$" },
+              "path": { "type": "string", "minLength": 1 }
+            }
+          }
+        },
+        "provider": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "organizationId", "billingAccountId", "primaryProjectId", "recoveryProjectId", "region", "simulationGuard"],
+          "properties": {
+            "type": { "const": "gcp" },
+            "organizationId": { "type": "string", "pattern": "^[0-9]+$" },
+            "billingAccountId": { "type": "string", "minLength": 1 },
+            "primaryProjectId": { "$ref": "#/$defs/gcpProjectId" },
+            "recoveryProjectId": { "$ref": "#/$defs/gcpProjectId" },
+            "region": { "type": "string", "minLength": 1 },
+            "simulationGuard": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["requiredLabels"],
+              "properties": {
+                "requiredLabels": {
+                  "type": "object",
+                  "minProperties": 1,
+                  "additionalProperties": { "type": "string", "minLength": 1 }
+                }
+              }
+            }
+          }
+        },
+        "terraform": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["workingDirectory", "backend", "plan"],
+          "properties": {
+            "workingDirectory": { "type": "string", "minLength": 1 },
+            "backend": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["bucket", "prefix"],
+              "properties": {
+                "bucket": { "type": "string", "minLength": 3 },
+                "prefix": { "type": "string", "minLength": 1 }
+              }
+            },
+            "plan": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["refreshOnly", "detailedExitCode"],
+              "properties": {
+                "refreshOnly": { "type": "boolean" },
+                "detailedExitCode": { "type": "boolean" }
+              }
+            }
+          }
+        },
+        "database": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["engine", "sourceInstance", "recoveryInstanceSuffix", "backup", "restore"],
+          "properties": {
+            "engine": { "enum": ["cloud-sql-postgresql", "cloud-sql-mysql", "alloydb"] },
+            "sourceInstance": { "type": "string", "minLength": 1 },
+            "recoveryInstanceSuffix": { "const": "-dr-restore" },
+            "backup": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["strategy", "maxAgeMinutes", "crossRegion"],
+              "properties": {
+                "strategy": { "enum": ["point-in-time", "snapshot"] },
+                "maxAgeMinutes": { "type": "integer", "minimum": 0 },
+                "crossRegion": { "type": "boolean" }
+              }
+            },
+            "restore": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["overwriteSource", "validateConnectivity", "validateSchemaChecksum", "validateReadOnlyQuery"],
+              "properties": {
+                "overwriteSource": { "const": false },
+                "validateConnectivity": { "const": true },
+                "validateSchemaChecksum": { "const": true },
+                "validateReadOnlyQuery": { "const": true }
+              }
+            }
+          }
+        },
+        "gke": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["sourceCluster", "recoveryClusterSuffix", "location", "requirePrivateEndpoint", "requireWorkloadIdentity"],
+          "properties": {
+            "sourceCluster": { "type": "string", "minLength": 1 },
+            "recoveryClusterSuffix": { "const": "-dr-sandbox" },
+            "location": { "type": "string", "minLength": 1 },
+            "requirePrivateEndpoint": { "const": true },
+            "requireWorkloadIdentity": { "const": true }
+          }
+        },
+        "iamBackup": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["vault", "include", "excludePrivateKeys", "humanAccess", "retentionDays"],
+          "properties": {
+            "vault": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["provider", "projectId", "secretPrefix", "kmsKey"],
+              "properties": {
+                "provider": { "const": "gcp-secret-manager" },
+                "projectId": { "$ref": "#/$defs/gcpProjectId" },
+                "secretPrefix": { "$ref": "#/$defs/dnsLabel" },
+                "kmsKey": { "type": "string", "pattern": "^projects/.+/locations/.+/keyRings/.+/cryptoKeys/.+$" }
+              }
+            },
+            "include": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["serviceAccounts", "customRoles", "policyBindings", "workloadIdentity"],
+              "properties": {
+                "serviceAccounts": { "type": "boolean" },
+                "customRoles": { "type": "boolean" },
+                "policyBindings": { "type": "boolean" },
+                "workloadIdentity": { "type": "boolean" }
+              }
+            },
+            "excludePrivateKeys": { "const": true },
+            "humanAccess": { "const": "denied" },
+            "retentionDays": { "type": "integer", "minimum": 1, "maximum": 3650 }
+          }
+        },
+        "flux": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["repository", "branch", "path", "namespace"],
+          "properties": {
+            "repository": { "type": "string", "pattern": "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$" },
+            "branch": { "type": "string", "minLength": 1 },
+            "path": { "type": "string", "minLength": 1 },
+            "namespace": { "$ref": "#/$defs/dnsLabel" }
+          }
+        },
+        "recovery": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["targetRtoMinutes", "targetRpoMinutes", "approvalEnvironment", "phases"],
+          "properties": {
+            "targetRtoMinutes": { "type": "integer", "minimum": 1 },
+            "targetRpoMinutes": { "type": "integer", "minimum": 0 },
+            "approvalEnvironment": { "$ref": "#/$defs/dnsLabel" },
+            "phases": {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": { "enum": ["foundation", "iam", "terraform", "database", "gke", "flux", "workloads", "validation"] }
+            }
+          }
+        },
+        "simulation": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["cadence", "timeZone", "maxDurationMinutes", "cleanup"],
+          "properties": {
+            "cadence": { "type": "string", "minLength": 9 },
+            "timeZone": { "type": "string", "minLength": 1 },
+            "maxDurationMinutes": { "type": "integer", "minimum": 1, "maximum": 1440 },
+            "cleanup": { "const": "always" }
+          }
+        },
+        "guardrails": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["killSwitchEnabled", "allowedRecoveryProjects", "requireDisposableLabels", "requireImmutableSource", "requireSignedEvidence", "maxChangedResources", "maxDeletedResources", "maxEstimatedCostUsd", "allowOrganizationIamChanges", "allowFolderIamChanges"],
+          "properties": {
+            "killSwitchEnabled": { "const": true },
+            "allowedRecoveryProjects": {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": { "$ref": "#/$defs/gcpProjectId" }
+            },
+            "requireDisposableLabels": { "const": true },
+            "requireImmutableSource": { "const": true },
+            "requireSignedEvidence": { "const": true },
+            "maxChangedResources": { "type": "integer", "minimum": 0 },
+            "maxDeletedResources": { "type": "integer", "minimum": 0 },
+            "maxEstimatedCostUsd": { "type": "number", "minimum": 0 },
+            "allowOrganizationIamChanges": { "const": false },
+            "allowFolderIamChanges": { "const": false }
+          }
+        },
+        "features": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["terraformDriftDetection", "gcpFoundationRecovery", "iamBackup", "iamRestore", "databaseRecovery", "gkeRecovery", "fluxBootstrap", "periodicSimulation", "realRecovery"],
+          "properties": {
+            "terraformDriftDetection": { "type": "boolean", "default": false },
+            "gcpFoundationRecovery": { "type": "boolean", "default": false },
+            "iamBackup": { "type": "boolean", "default": false },
+            "iamRestore": { "type": "boolean", "default": false },
+            "databaseRecovery": { "type": "boolean", "default": false },
+            "gkeRecovery": { "type": "boolean", "default": false },
+            "fluxBootstrap": { "type": "boolean", "default": false },
+            "periodicSimulation": { "type": "boolean", "default": false },
+            "realRecovery": { "type": "boolean", "default": false }
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "dnsLabel": { "type": "string", "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$", "maxLength": 63 },
+    "gcpProjectId": { "type": "string", "pattern": "^[a-z][a-z0-9-]{4,28}[a-z0-9]$" }
+  }
+}

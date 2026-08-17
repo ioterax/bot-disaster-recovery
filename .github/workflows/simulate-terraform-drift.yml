@@ -1,0 +1,44 @@
+name: Simulate - Terraform drift
+
+on:
+  workflow_call:
+    inputs:
+      scenario: { required: true, type: string }
+      confirmation: { required: true, type: string }
+  workflow_dispatch:
+    inputs:
+      scenario:
+        description: Synthetic Terraform event
+        required: true
+        default: resource-deleted
+        type: choice
+        options: [resource-deleted, resource-modified, state-unavailable]
+      confirmation:
+        description: Type SIMULATE to confirm
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  terraform:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 26.6.0 }
+      - name: Enforce read-only guardrails
+        run: |
+          node --run check:runtime
+          test "${{ inputs.confirmation }}" = "SIMULATE" || { echo "confirmation must equal SIMULATE" >&2; exit 1; }
+      - name: Simulate immutable checkout and backend init
+        run: |
+          sleep 3
+          echo "Terraform source and backend initialized synthetically."
+      - name: Simulate refresh-only plan and classification
+        run: |
+          sleep 3
+          echo "${{ inputs.scenario }} classified; zero mutations permitted."
+
