@@ -14,7 +14,23 @@ test('the example is a simulation plan with destructive capabilities disabled', 
   assert.match(plan, /^\s*fluxBootstrap: false$/m);
   assert.match(plan, /^\s*periodicSimulation: false$/m);
   assert.match(plan, /^\s*realRecovery: false$/m);
+  assert.match(plan, /^\s*enabled: false$/m);
   assert.match(plan, /^\s*cleanup: always$/m);
+});
+
+test('AI integration defaults to advisory and protects sensitive infrastructure data', async () => {
+  const plan = await readFile(examplePath, 'utf8');
+  const schema = JSON.parse(await readFile(schemaPath, 'utf8'));
+  const aiProperties = schema.properties.spec.properties.ai.properties;
+
+  assert.match(plan, /^\s*mode: advisory$/m);
+  assert.match(plan, /^\s*redactSecrets: true$/m);
+  assert.match(plan, /^\s*allowSourceCode: false$/m);
+  assert.match(plan, /^\s*allowInfrastructureState: false$/m);
+  assert.match(plan, /^\s*blockRecoveryOnProviderFailure: false$/m);
+  assert.equal(aiProperties.dataPolicy.properties.redactSecrets.const, true);
+  assert.equal(aiProperties.dataPolicy.properties.allowInfrastructureState.const, false);
+  assert.equal(aiProperties.enforcement.properties.blockRecoveryOnProviderFailure.const, false);
 });
 
 test('IAM snapshots exclude private keys and deny routine human access', async () => {

@@ -26,21 +26,22 @@ jobs:
     timeout-minutes: 10
     env:
       DR_CONFIRMATION: ${{ inputs.confirmation }}
+      DR_SCENARIO: flux-bootstrap
       DR_GITOPS_PATH: ${{ inputs.gitops_path }}
+      DR_PHASES: cluster-readiness,immutable-revision,controller-install,source-ready,kustomizations,helm-releases,workload-health
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: { node-version: 26.6.0 }
-      - name: Enforce GitOps guardrails
+      - name: Run deterministic FluxCD simulation
         run: |
           node --run check:runtime
-          test "$DR_CONFIRMATION" = "SIMULATE" || { echo "confirmation must equal SIMULATE" >&2; exit 1; }
-          [[ "$DR_GITOPS_PATH" != /* && "$DR_GITOPS_PATH" != *..* ]] || { echo "unsafe GitOps path" >&2; exit 1; }
-      - name: Simulate bootstrap at an immutable revision
-        run: |
-          sleep 3
-          echo "Flux controllers and immutable Git source bootstrapped synthetically."
-      - name: Simulate reconciliation and workload health
-        run: |
-          sleep 3
-          echo "Kustomizations, Helm releases and workloads converged."
+          node scripts/simulate-recovery.mjs
+      - name: Publish FluxCD evidence
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: dr-evidence-flux-bootstrap-${{ github.run_id }}-${{ github.run_attempt }}
+          path: artifacts/evidence/flux-bootstrap.json
+          if-no-files-found: error
+          retention-days: 30

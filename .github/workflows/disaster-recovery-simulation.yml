@@ -16,15 +16,45 @@ on:
           - database-recovery
           - gke-recovery
           - flux-bootstrap
+          - ai-analysis
       recovery_project:
         description: Disposable project; must end with -dr-sandbox
         required: true
-        default: ioterax-dr-sandbox
+        default: sample-dr-sandbox
         type: string
       recovery_point_age_minutes:
         description: Synthetic backup age used by RPO gates
         required: true
         default: "5"
+        type: string
+      ai_provider:
+        description: AI provider used only by ai-analysis
+        required: true
+        default: codex-cloud
+        type: choice
+        options: [codex-cloud, gemini-vertex-ai, gemini-api]
+      ai_model_tier:
+        description: Portable AI model tier
+        required: true
+        default: balanced
+        type: choice
+        options: [efficient, balanced, frontier, custom]
+      ai_reasoning_level:
+        description: Portable reasoning level
+        required: true
+        default: medium
+        type: choice
+        options: [low, medium, high]
+      ai_task_type:
+        description: Bounded AI responsibility
+        required: true
+        default: recovery-plan-review
+        type: choice
+        options: [inventory-classification, dependency-inference, recovery-plan-review, evidence-summary]
+      ai_custom_model:
+        description: Optional model ID when tier is custom
+        required: false
+        default: ""
         type: string
       confirmation:
         description: Type SIMULATE to confirm
@@ -72,7 +102,7 @@ jobs:
     if: ${{ inputs.scenario == 'database-recovery' }}
     uses: ./.github/workflows/simulate-database-recovery.yml
     with:
-      restore_target: ioterax-database-dr-restore
+      restore_target: sample-database-dr-restore
       recovery_point_age_minutes: ${{ inputs.recovery_point_age_minutes }}
       confirmation: ${{ inputs.confirmation }}
 
@@ -80,7 +110,7 @@ jobs:
     if: ${{ inputs.scenario == 'gke-recovery' }}
     uses: ./.github/workflows/simulate-gke-recovery.yml
     with:
-      recovery_cluster: ioterax-gke-dr-sandbox
+      recovery_cluster: sample-gke-dr-sandbox
       confirmation: ${{ inputs.confirmation }}
 
   flux:
@@ -88,4 +118,16 @@ jobs:
     uses: ./.github/workflows/simulate-flux-bootstrap.yml
     with:
       gitops_path: clusters/recovery
+      confirmation: ${{ inputs.confirmation }}
+
+  ai:
+    if: ${{ inputs.scenario == 'ai-analysis' }}
+    uses: ./.github/workflows/simulate-ai-analysis.yml
+    with:
+      provider: ${{ inputs.ai_provider }}
+      model_tier: ${{ inputs.ai_model_tier }}
+      reasoning_level: ${{ inputs.ai_reasoning_level }}
+      ai_task_type: ${{ inputs.ai_task_type }}
+      data_classification: metadata-only
+      custom_model: ${{ inputs.ai_custom_model }}
       confirmation: ${{ inputs.confirmation }}

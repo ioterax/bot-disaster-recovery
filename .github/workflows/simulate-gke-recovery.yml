@@ -10,7 +10,7 @@ on:
       recovery_cluster:
         description: Disposable cluster; must end with -dr-sandbox
         required: true
-        default: ioterax-gke-dr-sandbox
+        default: sample-gke-dr-sandbox
         type: string
       confirmation:
         description: Type SIMULATE to confirm
@@ -26,25 +26,22 @@ jobs:
     timeout-minutes: 10
     env:
       DR_CONFIRMATION: ${{ inputs.confirmation }}
+      DR_SCENARIO: gke-recovery
       DR_TARGET: ${{ inputs.recovery_cluster }}
+      DR_PHASES: target-identity,private-network,secondary-ranges,quota-and-budget,cluster,workload-identity,operator-install,policy-health
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: { node-version: 26.6.0 }
-      - name: Enforce cluster guardrails
+      - name: Run deterministic GKE simulation
         run: |
           node --run check:runtime
-          test "$DR_CONFIRMATION" = "SIMULATE" || { echo "confirmation must equal SIMULATE" >&2; exit 1; }
-          [[ "$DR_TARGET" =~ -dr-sandbox$ ]] || { echo "cluster must end with -dr-sandbox" >&2; exit 1; }
-      - name: Simulate network, quota and budget preflight
-        run: |
-          sleep 3
-          echo "Private networking, secondary ranges, quota and budget validated."
-      - name: Simulate GKE and identity recovery
-        run: |
-          sleep 3
-          echo "Private GKE and Workload Identity recovered synthetically."
-      - name: Simulate policy and health gates
-        run: |
-          sleep 3
-          echo "RBAC, policies, CSI drivers and cluster health validated."
+          node scripts/simulate-recovery.mjs
+      - name: Publish GKE evidence
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: dr-evidence-gke-recovery-${{ github.run_id }}-${{ github.run_attempt }}
+          path: artifacts/evidence/gke-recovery.json
+          if-no-files-found: error
+          retention-days: 30

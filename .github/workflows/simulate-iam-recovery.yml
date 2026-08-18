@@ -26,22 +26,23 @@ jobs:
     timeout-minutes: 10
     env:
       DR_CONFIRMATION: ${{ inputs.confirmation }}
+      DR_SCENARIO: iam-recovery
       DR_SNAPSHOT_AGE_MINUTES: ${{ inputs.snapshot_age_minutes }}
+      DR_TARGET_RPO_MINUTES: "15"
+      DR_PHASES: snapshot-catalog,rpo-gate,normalize-bindings,exclude-private-keys,kms-integrity,dependency-order,synthetic-restore
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: { node-version: 26.6.0 }
-      - name: Enforce IAM and RPO guardrails
+      - name: Run deterministic IAM simulation
         run: |
           node --run check:runtime
-          test "$DR_CONFIRMATION" = "SIMULATE" || { echo "confirmation must equal SIMULATE" >&2; exit 1; }
-          [[ "$DR_SNAPSHOT_AGE_MINUTES" =~ ^[0-9]+$ ]] || { echo "snapshot age must be a non-negative integer" >&2; exit 1; }
-          (( DR_SNAPSHOT_AGE_MINUTES <= 15 )) || { echo "snapshot exceeds RPO" >&2; exit 1; }
-      - name: Simulate discovery, normalization and key exclusion
-        run: |
-          sleep 3
-          echo "IAM declarations normalized; private keys excluded."
-      - name: Simulate encryption, integrity and ordered restore
-        run: |
-          sleep 3
-          echo "Machine-only KMS snapshot verified and restored synthetically."
+          node scripts/simulate-recovery.mjs
+      - name: Publish IAM evidence
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: dr-evidence-iam-recovery-${{ github.run_id }}-${{ github.run_attempt }}
+          path: artifacts/evidence/iam-recovery.json
+          if-no-files-found: error
+          retention-days: 30

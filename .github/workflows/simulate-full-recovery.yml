@@ -11,7 +11,7 @@ on:
       recovery_project:
         description: Disposable project; must end with -dr-sandbox
         required: true
-        default: ioterax-dr-sandbox
+        default: sample-dr-sandbox
         type: string
       recovery_point_age_minutes:
         description: Synthetic backup age
@@ -51,7 +51,7 @@ jobs:
     needs: terraform
     uses: ./.github/workflows/simulate-database-recovery.yml
     with:
-      restore_target: ioterax-database-dr-restore
+      restore_target: sample-database-dr-restore
       recovery_point_age_minutes: ${{ inputs.recovery_point_age_minutes }}
       confirmation: ${{ inputs.confirmation }}
 
@@ -59,7 +59,7 @@ jobs:
     needs: database
     uses: ./.github/workflows/simulate-gke-recovery.yml
     with:
-      recovery_cluster: ioterax-gke-dr-sandbox
+      recovery_cluster: sample-gke-dr-sandbox
       confirmation: ${{ inputs.confirmation }}
 
   flux:
@@ -73,15 +73,24 @@ jobs:
     needs: [foundation, iam, terraform, database, gke, flux]
     runs-on: ubuntu-latest
     steps:
-      - name: Publish full recovery evidence
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 26.6.0 }
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: dr-evidence-*
+          path: artifacts/components
+      - name: Validate and aggregate component evidence
         run: |
-          sleep 3
-          {
-            echo "## Full project-loss simulation"
-            echo "- Order: foundation → IAM → Terraform → database → GKE → FluxCD"
-            echo "- RTO/RPO gates: passed synthetically"
-            echo "- External changes: none"
-          } >> "$GITHUB_STEP_SUMMARY"
+          node --run check:runtime
+          node scripts/aggregate-evidence.mjs
+      - name: Publish aggregate evidence artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dr-evidence-full-project-loss-${{ github.run_id }}-${{ github.run_attempt }}
+          path: artifacts/evidence/full-project-loss.json
+          if-no-files-found: error
+          retention-days: 30
 
   cleanup:
     needs: [foundation, iam, terraform, database, gke, flux]
@@ -90,8 +99,7 @@ jobs:
     steps:
       - name: Verify cleanup
         run: |
-          sleep 3
-          echo "Nothing to clean: no external resources were created."
+          echo "Cleanup verified: the simulation requested no identity and created no external resources."
       - name: Preserve failure state
         if: ${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') }}
         run: exit 1

@@ -1,4 +1,4 @@
-apiVersion: itscm.ioterax.io/v1alpha1
+apiVersion: recovery.controlplane.io/v1alpha1
 kind: DisasterRecoveryPlan
 
 metadata:
@@ -11,11 +11,11 @@ spec:
 
   sources:
     - role: terraform
-      repository: ioterax/infrastructure
+      repository: example/infrastructure
       ref: refs/heads/main
       path: terraform
     - role: gitops
-      repository: ioterax/gitops
+      repository: example/gitops
       ref: refs/heads/main
       path: clusters/production
 
@@ -23,8 +23,8 @@ spec:
     type: gcp
     organizationId: "123456789012"
     billingAccountId: "000000-000000-000000"
-    primaryProjectId: ioterax-production
-    recoveryProjectId: ioterax-dr-sandbox
+    primaryProjectId: sample-production
+    recoveryProjectId: sample-dr-sandbox
     region: europe-west1
     simulationGuard:
       requiredLabels:
@@ -34,7 +34,7 @@ spec:
   terraform:
     workingDirectory: terraform
     backend:
-      bucket: ioterax-terraform-state
+      bucket: sample-terraform-state
       prefix: production
     plan:
       refreshOnly: true
@@ -42,7 +42,7 @@ spec:
 
   database:
     engine: cloud-sql-postgresql
-    sourceInstance: ioterax-production-db
+    sourceInstance: sample-production-db
     recoveryInstanceSuffix: -dr-restore
     backup:
       strategy: point-in-time
@@ -55,7 +55,7 @@ spec:
       validateReadOnlyQuery: true
 
   gke:
-    sourceCluster: ioterax-production
+    sourceCluster: sample-production
     recoveryClusterSuffix: -dr-sandbox
     location: europe-west1
     requirePrivateEndpoint: true
@@ -64,9 +64,9 @@ spec:
   iamBackup:
     vault:
       provider: gcp-secret-manager
-      projectId: ioterax-security-vault
+      projectId: sample-security-vault
       secretPrefix: dr-iam-snapshot
-      kmsKey: projects/ioterax-security-vault/locations/europe-west1/keyRings/dr/cryptoKeys/iam-snapshots
+      kmsKey: projects/sample-security-vault/locations/europe-west1/keyRings/dr/cryptoKeys/iam-snapshots
     include:
       serviceAccounts: true
       customRoles: true
@@ -77,10 +77,55 @@ spec:
     retentionDays: 90
 
   flux:
-    repository: ioterax/gitops
+    repository: example/gitops
     branch: main
     path: clusters/recovery
     namespace: flux-system
+
+  ai:
+    enabled: false
+    mode: advisory
+    defaultProfile: codex-balanced
+    allowedTaskTypes:
+      - inventory-classification
+      - dependency-inference
+      - recovery-plan-review
+      - evidence-summary
+    profiles:
+      - name: codex-efficient
+        provider: codex-cloud
+        modelTier: efficient
+        model: gpt-5.6-luna
+        reasoningLevel: low
+      - name: codex-balanced
+        provider: codex-cloud
+        modelTier: balanced
+        model: gpt-5.6-terra
+        reasoningLevel: medium
+      - name: codex-frontier
+        provider: codex-cloud
+        modelTier: frontier
+        model: gpt-5.6-sol
+        reasoningLevel: high
+      - name: gemini-balanced
+        provider: gemini-vertex-ai
+        modelTier: balanced
+        model: gemini-3.6-flash
+        reasoningLevel: medium
+      - name: gemini-frontier
+        provider: gemini-vertex-ai
+        modelTier: frontier
+        model: gemini-3.1-pro-preview
+        reasoningLevel: high
+    dataPolicy:
+      redactSecrets: true
+      allowSourceCode: false
+      allowInfrastructureState: false
+      maxPromptBytes: 65536
+      retention: provider-zero-data-retention
+    enforcement:
+      default: advisory
+      blockRecoveryOnProviderFailure: false
 
   recovery:
     targetRtoMinutes: 60
@@ -105,7 +150,7 @@ spec:
   guardrails:
     killSwitchEnabled: true
     allowedRecoveryProjects:
-      - ioterax-dr-sandbox
+      - sample-dr-sandbox
     requireDisposableLabels: true
     requireImmutableSource: true
     requireSignedEvidence: true

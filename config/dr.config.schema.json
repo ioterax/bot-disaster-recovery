@@ -1,12 +1,12 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/ioterax/bot-disaster-recovery/config/dr.config.schema.json",
-  "title": "Ioterax Disaster Recovery Plan",
+  "$id": "https://github.com/ferreiraad/disaster-recovery-control-plane/blob/main/config/dr.config.schema.json",
+  "title": "StormHarbor Disaster Recovery Plan",
   "type": "object",
   "additionalProperties": false,
   "required": ["apiVersion", "kind", "metadata", "spec"],
   "properties": {
-    "apiVersion": { "const": "itscm.ioterax.io/v1alpha1" },
+    "apiVersion": { "const": "recovery.controlplane.io/v1alpha1" },
     "kind": { "const": "DisasterRecoveryPlan" },
     "metadata": {
       "type": "object",
@@ -21,7 +21,7 @@
     "spec": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["mode", "sources", "provider", "terraform", "database", "gke", "iamBackup", "flux", "recovery", "simulation", "guardrails", "features"],
+      "required": ["mode", "sources", "provider", "terraform", "database", "gke", "iamBackup", "flux", "ai", "recovery", "simulation", "guardrails", "features"],
       "properties": {
         "mode": { "enum": ["simulation", "recovery"] },
         "sources": {
@@ -176,6 +176,59 @@
             "namespace": { "$ref": "#/$defs/dnsLabel" }
           }
         },
+        "ai": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["enabled", "mode", "defaultProfile", "allowedTaskTypes", "profiles", "dataPolicy", "enforcement"],
+          "properties": {
+            "enabled": { "type": "boolean", "default": false },
+            "mode": { "enum": ["advisory", "evaluation"] },
+            "defaultProfile": { "$ref": "#/$defs/dnsLabel" },
+            "allowedTaskTypes": {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": { "$ref": "#/$defs/aiTaskType" }
+            },
+            "profiles": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["name", "provider", "modelTier", "model", "reasoningLevel"],
+                "properties": {
+                  "name": { "$ref": "#/$defs/dnsLabel" },
+                  "provider": { "enum": ["codex-cloud", "gemini-vertex-ai", "gemini-api"] },
+                  "modelTier": { "enum": ["efficient", "balanced", "frontier", "custom"] },
+                  "model": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{1,127}$" },
+                  "reasoningLevel": { "enum": ["low", "medium", "high"] }
+                }
+              }
+            },
+            "dataPolicy": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["redactSecrets", "allowSourceCode", "allowInfrastructureState", "maxPromptBytes", "retention"],
+              "properties": {
+                "redactSecrets": { "const": true },
+                "allowSourceCode": { "type": "boolean", "default": false },
+                "allowInfrastructureState": { "const": false },
+                "maxPromptBytes": { "type": "integer", "minimum": 1024, "maximum": 1048576 },
+                "retention": { "enum": ["provider-zero-data-retention", "provider-managed", "control-plane-only"] }
+              }
+            },
+            "enforcement": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["default", "blockRecoveryOnProviderFailure"],
+              "properties": {
+                "default": { "enum": ["advisory", "required-for-planning"] },
+                "blockRecoveryOnProviderFailure": { "const": false }
+              }
+            }
+          }
+        },
         "recovery": {
           "type": "object",
           "additionalProperties": false,
@@ -246,6 +299,7 @@
   },
   "$defs": {
     "dnsLabel": { "type": "string", "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$", "maxLength": 63 },
-    "gcpProjectId": { "type": "string", "pattern": "^[a-z][a-z0-9-]{4,28}[a-z0-9]$" }
+    "gcpProjectId": { "type": "string", "pattern": "^[a-z][a-z0-9-]{4,28}[a-z0-9]$" },
+    "aiTaskType": { "enum": ["inventory-classification", "dependency-inference", "recovery-plan-review", "evidence-summary"] }
   }
 }

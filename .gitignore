@@ -1,0 +1,8 @@
+.venv-docs/
+site/
+artifacts/
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+.DS_Store

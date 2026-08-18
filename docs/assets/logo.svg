@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="StormHarbor">
+  <path fill="#031525" d="M32 3 57 13v18c0 15-10 25-25 30C17 56 7 46 7 31V13L32 3Z"/>
+  <path fill="#C5A04A" d="M29 13h6v8h7l3 5H19l3-5h7v-8Zm-5 16h16v15c0 6-4 10-8 12-4-2-8-6-8-12V29Zm6 4v14h4V33h-4Z"/>
+  <path fill="#F4F1E8" d="M13 39c5-3 9-3 14 0 5 3 9 3 14 0 4-2 7-2 10-1v5c-3-1-6-1-10 1-5 3-9 3-14 0-5-3-9-3-14 0v-5Z"/>
+</svg>

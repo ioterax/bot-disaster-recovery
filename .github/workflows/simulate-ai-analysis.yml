@@ -1,0 +1,87 @@
+name: Simulate - AI provider analysis
+
+on:
+  workflow_call:
+    inputs:
+      provider: { required: true, type: string }
+      model_tier: { required: true, type: string }
+      reasoning_level: { required: true, type: string }
+      ai_task_type: { required: true, type: string }
+      data_classification: { required: true, type: string }
+      custom_model: { required: false, type: string, default: "" }
+      confirmation: { required: true, type: string }
+  workflow_dispatch:
+    inputs:
+      provider:
+        description: AI execution provider
+        required: true
+        default: codex-cloud
+        type: choice
+        options: [codex-cloud, gemini-vertex-ai, gemini-api]
+      model_tier:
+        description: Portable model quality/cost tier
+        required: true
+        default: balanced
+        type: choice
+        options: [efficient, balanced, frontier, custom]
+      reasoning_level:
+        description: Portable reasoning level supported by both providers
+        required: true
+        default: medium
+        type: choice
+        options: [low, medium, high]
+      ai_task_type:
+        description: Bounded AI responsibility
+        required: true
+        default: recovery-plan-review
+        type: choice
+        options: [inventory-classification, dependency-inference, recovery-plan-review, evidence-summary]
+      data_classification:
+        description: Maximum data class allowed in the synthetic prompt
+        required: true
+        default: metadata-only
+        type: choice
+        options: [metadata-only, redacted-config]
+      custom_model:
+        description: Model ID; used only when model_tier is custom
+        required: false
+        default: ""
+        type: string
+      confirmation:
+        description: Type SIMULATE to confirm
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  ai-analysis:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      DR_CONFIRMATION: ${{ inputs.confirmation }}
+      DR_SCENARIO: ai-analysis
+      DR_PHASES: data-policy,model-resolution,structured-analysis,schema-validation,human-review,evidence
+      DR_AI_PROVIDER: ${{ inputs.provider }}
+      DR_AI_MODEL_TIER: ${{ inputs.model_tier }}
+      DR_AI_REASONING_LEVEL: ${{ inputs.reasoning_level }}
+      DR_AI_TASK_TYPE: ${{ inputs.ai_task_type }}
+      DR_AI_DATA_CLASSIFICATION: ${{ inputs.data_classification }}
+      DR_AI_MODEL: ${{ inputs.custom_model }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 26.6.0 }
+      - name: Run provider-neutral AI simulation
+        run: |
+          node --run check:runtime
+          node scripts/simulate-ai-provider.mjs
+      - name: Publish AI analysis evidence
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: dr-evidence-ai-analysis-${{ github.run_id }}-${{ github.run_attempt }}
+          path: artifacts/evidence/ai-analysis.json
+          if-no-files-found: error
+          retention-days: 30

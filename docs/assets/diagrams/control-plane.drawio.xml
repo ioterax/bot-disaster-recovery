@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="app.diagrams.net" modified="2026-08-18T00:00:00.000Z" agent="Codex" version="24.7.17" type="device">
+  <diagram id="dr-control-plane" name="DR Control Plane">
+    <mxGraphModel dx="1600" dy="1000" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1920" pageHeight="1080" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+
+        <mxCell id="title" value="DISASTER RECOVERY CONTROL PLANE — FEDERATED SOURCE OF TRUTH" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;fontSize=26;fontStyle=1;fontColor=#031525;" vertex="1" parent="1">
+          <mxGeometry x="40" y="20" width="1500" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="subtitle" value="Cada sistema permanece autoritativo no seu domínio; o control plane descobre, correlaciona, governa e orquestra." style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;fontSize=14;fontColor=#5f7182;" vertex="1" parent="1">
+          <mxGeometry x="40" y="60" width="1500" height="30" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="sources-layer" value="1  ·  FEDERATED SOURCES OF TRUTH" style="swimlane;html=1;horizontal=1;startSize=32;rounded=0;collapsible=0;fillColor=#FFF9E8;strokeColor=#9a7628;fontColor=#704B00;fontStyle=1;swimlaneFillColor=#FFFFFF;" vertex="1" parent="1">
+          <mxGeometry x="40" y="110" width="1500" height="165" as="geometry"/>
+        </mxCell>
+        <mxCell id="github" value="GitHub&lt;br&gt;&lt;b&gt;DR policy + plans&lt;/b&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f4e8c1;strokeColor=#9a7628;strokeWidth=2;fontColor=#031525;" vertex="1" parent="sources-layer">
+          <mxGeometry x="30" y="58" width="165" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="tf-git" value="Terraform Git&lt;br&gt;&lt;b&gt;desired infra&lt;/b&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f4e8c1;strokeColor=#9a7628;strokeWidth=2;fontColor=#031525;" vertex="1" parent="sources-layer">
+          <mxGeometry x="225" y="58" width="165" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="tf-backend" value="Remote backend&lt;br&gt;&lt;b&gt;Terraform state&lt;/b&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f4e8c1;strokeColor=#9a7628;strokeWidth=2;fontColor=#031525;" vertex="1" parent="sources-layer">
+          <mxGeometry x="420" y="58" width="165" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="gitops" value="GitOps Git&lt;br&gt;&lt;b&gt;desired workloads&lt;/b&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f4e8c1;strokeColor=#9a7628;strokeWidth=2;fontColor=#031525;" vertex="1" parent="sources-layer">
+          <mxGeometry x="615" y="58" width="165" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="gcp-api" value="GCP APIs / CAI&lt;br&gt;&lt;b&gt;cloud actual state&lt;/b&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f4e8c1;strokeColor=#9a7628;strokeWidth=2;fontColor=#031525;" vertex="1" parent="sources-layer">
+          <mxGeometry x="810" y="58" width="165" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="k8s-api" value="Kubernetes API&lt;br&gt;&lt;b&gt;cluster actual state&lt;/b&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f4e8c1;strokeColor=#9a7628;strokeWidth=2;fontColor=#031525;" vertex="1" parent="sources-layer">
+          <mxGeometry x="1005" y="58" width="165" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="vault" value="Secret Manager + KMS&lt;br&gt;&lt;b&gt;secret authority&lt;/b&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f4e8c1;strokeColor=#9a7628;strokeWidth=2;fontColor=#031525;" vertex="1" parent="sources-layer">
+          <mxGeometry x="1200" y="58" width="220" height="70" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="control-layer" value="2  ·  DR CONTROL PLANE — OUTSIDE THE RECOVERY TARGET" style="swimlane;html=1;horizontal=1;startSize=32;rounded=0;collapsible=0;fillColor=#E8FCF8;strokeColor=#9a7628;fontColor=#075C53;fontStyle=1;swimlaneFillColor=#FFFFFF;" vertex="1" parent="1">
+          <mxGeometry x="200" y="325" width="1180" height="205" as="geometry"/>
+        </mxCell>
+        <mxCell id="ingestion" value="Ingestion&lt;br&gt;&amp; adapters" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f3e8c8;strokeColor=#9a7628;strokeWidth=2;fontColor=#031525;" vertex="1" parent="control-layer">
+          <mxGeometry x="30" y="70" width="145" height="75" as="geometry"/>
+        </mxCell>
+        <mxCell id="inventory" value="Inventory&lt;br&gt;service" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f3e8c8;strokeColor=#9a7628;strokeWidth=2;fontColor=#031525;" vertex="1" parent="control-layer">
+          <mxGeometry x="205" y="70" width="145" height="75" as="geometry"/>
+        </mxCell>
+        <mxCell id="graph" value="Dependency&lt;br&gt;graph" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f3e8c8;strokeColor=#9a7628;strokeWidth=2;fontColor=#031525;" vertex="1" parent="control-layer">
+          <mxGeometry x="380" y="70" width="145" height="75" as="geometry"/>
+        </mxCell>
+        <mxCell id="policy" value="Policy + ITSCM&lt;br&gt;engine" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f3e8c8;strokeColor=#9a7628;strokeWidth=2;fontColor=#031525;" vertex="1" parent="control-layer">
+          <mxGeometry x="555" y="70" width="145" height="75" as="geometry"/>
+        </mxCell>
+        <mxCell id="orchestrator" value="Recovery&lt;br&gt;&lt;b&gt;orchestrator&lt;/b&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1c775;strokeColor=#9a7628;strokeWidth=3;fontColor=#031525;" vertex="1" parent="control-layer">
+          <mxGeometry x="730" y="62" width="160" height="90" as="geometry"/>
+        </mxCell>
+        <mxCell id="evidence-service" value="Evidence&lt;br&gt;service" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f3e8c8;strokeColor=#9a7628;strokeWidth=2;fontColor=#031525;" vertex="1" parent="control-layer">
+          <mxGeometry x="920" y="70" width="145" height="75" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="execution-layer" value="3  ·  RECOVERY EXECUTION" style="swimlane;html=1;horizontal=1;startSize=32;rounded=0;collapsible=0;fillColor=#F5F0FF;strokeColor=#6b7c8c;fontColor=#51358A;fontStyle=1;swimlaneFillColor=#FFFFFF;" vertex="1" parent="1">
+          <mxGeometry x="40" y="580" width="1500" height="165" as="geometry"/>
+        </mxCell>
+        <mxCell id="gcp-foundation" value="GCP foundation&lt;br&gt;project / network / APIs" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e6eaf0;strokeColor=#6b7c8c;strokeWidth=2;fontColor=#031525;" vertex="1" parent="execution-layer">
+          <mxGeometry x="40" y="58" width="210" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="terraform" value="Terraform runner&lt;br&gt;plan / apply / state" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e6eaf0;strokeColor=#6b7c8c;strokeWidth=2;fontColor=#031525;" vertex="1" parent="execution-layer">
+          <mxGeometry x="280" y="58" width="210" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="database" value="Database adapter&lt;br&gt;PITR / restore / validate" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e6eaf0;strokeColor=#6b7c8c;strokeWidth=2;fontColor=#031525;" vertex="1" parent="execution-layer">
+          <mxGeometry x="520" y="58" width="210" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="gke" value="GKE adapter&lt;br&gt;cluster / identity" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e6eaf0;strokeColor=#6b7c8c;strokeWidth=2;fontColor=#031525;" vertex="1" parent="execution-layer">
+          <mxGeometry x="760" y="58" width="190" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="operator" value="Kubernetes DR Operator&lt;br&gt;CRDs / control loops" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d4dbe3;strokeColor=#6b7c8c;strokeWidth=3;fontColor=#031525;" vertex="1" parent="execution-layer">
+          <mxGeometry x="980" y="50" width="220" height="85" as="geometry"/>
+        </mxCell>
+        <mxCell id="flux" value="FluxCD&lt;br&gt;workload reconciliation" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e6eaf0;strokeColor=#6b7c8c;strokeWidth=2;fontColor=#031525;" vertex="1" parent="execution-layer">
+          <mxGeometry x="1230" y="58" width="210" height="70" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="data-layer" value="4  ·  OPERATIONAL INDEX, TELEMETRY AND PROOF" style="swimlane;html=1;horizontal=1;startSize=32;rounded=0;collapsible=0;fillColor=#EDF9ED;strokeColor=#526a59;fontColor=#276129;fontStyle=1;swimlaneFillColor=#FFFFFF;" vertex="1" parent="1">
+          <mxGeometry x="200" y="795" width="1180" height="155" as="geometry"/>
+        </mxCell>
+        <mxCell id="postgres" value="PostgreSQL&lt;br&gt;materialized inventory" style="rounded=0;whiteSpace=wrap;html=1;shape=cylinder3;boundedLbl=1;backgroundOutline=1;fillColor=#e8eee8;strokeColor=#526a59;strokeWidth=2;fontColor=#031525;" vertex="1" parent="data-layer">
+          <mxGeometry x="55" y="52" width="200" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="queue" value="Durable queue&lt;br&gt;commands + leases" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e8eee8;strokeColor=#526a59;strokeWidth=2;fontColor=#031525;" vertex="1" parent="data-layer">
+          <mxGeometry x="315" y="52" width="200" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="otel" value="OpenTelemetry&lt;br&gt;metrics / logs / traces" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e8eee8;strokeColor=#526a59;strokeWidth=2;fontColor=#031525;" vertex="1" parent="data-layer">
+          <mxGeometry x="575" y="52" width="200" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="evidence-store" value="Immutable evidence store&lt;br&gt;digest / signature / retention" style="rounded=0;whiteSpace=wrap;html=1;shape=cylinder3;boundedLbl=1;backgroundOutline=1;fillColor=#e8eee8;strokeColor=#526a59;strokeWidth=2;fontColor=#031525;" vertex="1" parent="data-layer">
+          <mxGeometry x="835" y="45" width="280" height="85" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="e1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#9a7628;strokeWidth=2;" edge="1" parent="1" source="github" target="ingestion"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#9a7628;strokeWidth=2;" edge="1" parent="1" source="tf-git" target="ingestion"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#9a7628;strokeWidth=2;" edge="1" parent="1" source="tf-backend" target="ingestion"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#9a7628;strokeWidth=2;" edge="1" parent="1" source="gitops" target="ingestion"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e5" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#9a7628;strokeWidth=2;" edge="1" parent="1" source="gcp-api" target="ingestion"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e6" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#9a7628;strokeWidth=2;" edge="1" parent="1" source="k8s-api" target="ingestion"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e7" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#9a7628;strokeWidth=2;" edge="1" parent="1" source="vault" target="orchestrator"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e8" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#9a7628;strokeWidth=2;" edge="1" parent="control-layer" source="ingestion" target="inventory"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e9" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#9a7628;strokeWidth=2;" edge="1" parent="control-layer" source="inventory" target="graph"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e10" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#9a7628;strokeWidth=2;" edge="1" parent="control-layer" source="graph" target="policy"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e11" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#9a7628;strokeWidth=2;" edge="1" parent="control-layer" source="policy" target="orchestrator"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e12" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#9a7628;strokeWidth=2;" edge="1" parent="control-layer" source="orchestrator" target="evidence-service"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e13" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#6b7c8c;strokeWidth=2;" edge="1" parent="1" source="orchestrator" target="gcp-foundation"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e14" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#6b7c8c;strokeWidth=2;" edge="1" parent="1" source="orchestrator" target="terraform"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e15" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#6b7c8c;strokeWidth=2;" edge="1" parent="1" source="orchestrator" target="database"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e16" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#6b7c8c;strokeWidth=2;" edge="1" parent="1" source="orchestrator" target="gke"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e17" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#6b7c8c;strokeWidth=2;" edge="1" parent="execution-layer" source="gke" target="operator"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e18" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#6b7c8c;strokeWidth=2;" edge="1" parent="execution-layer" source="operator" target="flux"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e19" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#526a59;strokeWidth=2;" edge="1" parent="1" source="inventory" target="postgres"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e20" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#526a59;strokeWidth=2;" edge="1" parent="1" source="orchestrator" target="queue"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e21" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#526a59;strokeWidth=2;" edge="1" parent="1" source="orchestrator" target="otel"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e22" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#526a59;strokeWidth=2;" edge="1" parent="1" source="evidence-service" target="evidence-store"><mxGeometry relative="1" as="geometry"/></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

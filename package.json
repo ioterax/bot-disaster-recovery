@@ -1,8 +1,8 @@
 {
-  "name": "@ioterax/bot-disaster-recovery",
+  "name": "storm-harbor",
   "version": "0.1.0",
   "private": true,
-  "description": "Plug-and-play ITSCM and Disaster Recovery as Code for Terraform, GCP, IAM and FluxCD.",
+  "description": "Federated disaster recovery control plane for Terraform, GCP, Kubernetes and GitOps.",
   "keywords": [
     "itscm",
     "disaster-recovery",
@@ -23,6 +23,7 @@
     "check:runtime": "node scripts/check-runtime.mjs",
     "test": "node --test test/disaster-recovery/*.test.mjs",
     "test:disaster-recovery": "node --test test/disaster-recovery/*.test.mjs",
+    "simulate": "node scripts/simulate-recovery.mjs",
     "test:mutation": "node scripts/manual-security-check.mjs mutation",
     "test:pentest": "node scripts/manual-security-check.mjs pentest",
     "test:security:owasp": "node scripts/manual-security-check.mjs owasp"

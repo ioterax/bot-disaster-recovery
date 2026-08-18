@@ -1,22 +1,30 @@
-# Configuration plan
+# Plano de configuração
 
-## Decision
+## Decisão
 
-Use a versioned YAML document as the primary configuration contract, backed by JSON Schema. Use environment variables only for process bootstrap and emergency runtime overrides, and use a secret manager for secret values.
+Use um documento YAML versionado como contrato principal, validado por JSON Schema. Variáveis de ambiente servem apenas ao bootstrap do processo e a overrides emergenciais de uma execução; valores secretos pertencem a um secret manager.
 
-A variables-only design is simple initially but becomes difficult to validate and audit when organizations have multiple repositories, projects, recovery phases and feature toggles. Structured YAML keeps those relationships explicit and reviewable. JSON Schema gives IDE completion and allows the GitHub App to reject invalid plans before running anything.
+Uma configuração somente por variáveis parece simples, mas se torna difícil de validar e auditar quando há múltiplos repositórios, projetos, fases e feature toggles. YAML mantém as relações explícitas; JSON Schema fornece validação e permite rejeitar planos inválidos antes de qualquer execução.
 
-## Configuration layers
+O `dr.config.yaml` é o contrato global da StormHarbor, mesmo usando a convenção `apiVersion`/`kind`. Ele não se torna automaticamente um objeto Kubernetes. O control plane valida e congela esse plano, então materializa apenas o recorte Kubernetes como `DisasterRecoveryPlan`, `RecoveryTarget` e `RecoveryRun` depois que as CRDs correspondentes estiverem instaladas no API server.
 
-1. **Built-in defaults:** safe values owned by the application. All operational features default to disabled.
-2. **Repository plan:** `dr.config.yaml`, reviewed with the same controls as infrastructure code.
-3. **Installation settings:** organization-level repository allowlists and policy ceilings owned by the GitHub App installation.
-4. **Runtime overrides:** a small set of environment variables used by an operator or orchestrator for a single execution.
-5. **Secret resolution:** values fetched at runtime using workload identity; never merged into logs or persisted in the repository.
+## Camadas de configuração
 
-An installation-level policy is a ceiling: a repository cannot enable a capability that the organization has forbidden.
+1. **Defaults internos:** valores seguros; capabilities mutáveis começam desabilitadas.
+2. **Plano no repositório:** `dr.config.yaml`, revisado como infrastructure code.
+3. **Política da instalação:** allowlists e limites máximos da organização.
+4. **Overrides de runtime:** conjunto pequeno, válido para uma execução.
+5. **Resolução de secrets:** valores buscados com workload identity, nunca persistidos ou impressos.
 
-## Allowed environment variables
+A policy da instalação é um teto: um repositório não habilita capability proibida pela organização.
+
+## Perfis de IA
+
+`spec.ai` mantém provider, tier, modelo exato, reasoning level e task type separados. A configuração começa com `enabled: false` e `mode: advisory`. A matriz e as regras de tradução estão em [AI providers](architecture/ai-providers.md).
+
+Model IDs não são secrets; credenciais são resolvidas em runtime. Terraform state, kubeconfig, tokens e secrets são proibidos no prompt. O control plane registra apenas input redigido, output estruturado, modelo efetivo, métricas e digests.
+
+## Variáveis permitidas
 
 | Variable | Purpose | Secret |
 | --- | --- | --- |
@@ -31,7 +39,7 @@ Do not create environment variables for every YAML field. Do not place GCP servi
 
 ## Feature toggles
 
-Feature toggles control code paths, not authorization. Each toggle requires all of the following before an operation can run:
+Feature toggles controlam code paths, não autorização. Cada operação exige:
 
 1. enabled in the repository plan;
 2. permitted by the GitHub App installation policy;
@@ -42,7 +50,7 @@ Feature toggles control code paths, not authorization. Each toggle requires all 
 
 Unknown toggles must fail schema validation. New toggles should default to `false` and document their required permissions.
 
-## IAM snapshot contract
+## Contrato do IAM snapshot
 
 An IAM snapshot should contain normalized declarative data and recovery metadata:
 
@@ -55,7 +63,7 @@ An IAM snapshot should contain normalized declarative data and recovery metadata
 
 The vault path in configuration is a reference, not a secret. Snapshot reads should be limited to the recovery workload identity. Snapshot writes should use a separate backup identity where practical, preventing a compromised recovery process from silently replacing trusted backups.
 
-## Validation and lifecycle
+## Validação e lifecycle
 
 - Validate syntax and schema on every pull request.
 - Resolve repositories to immutable commit SHAs for each recovery run.
@@ -64,7 +72,7 @@ The vault path in configuration is a reference, not a secret. Snapshot reads sho
 - Sign evidence and retain it independently from the infrastructure being recovered.
 - Introduce scheduled execution only after cleanup, quotas, budget alerts and kill-switch behavior are tested manually.
 
-## Guardrail evaluation order
+## Ordem de avaliação dos guardrails
 
 1. Validate the configuration schema and installation policy ceiling.
 2. Check the global kill switch before requesting workload identity.

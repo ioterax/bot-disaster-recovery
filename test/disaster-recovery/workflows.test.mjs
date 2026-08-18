@@ -21,6 +21,7 @@ test('Disaster Recovery simulations cover the declared resources', async () => {
     'simulate-iam-recovery.yml',
     'simulate-terraform-drift.yml',
     'simulate-flux-bootstrap.yml',
+    'simulate-ai-analysis.yml',
     'disaster-recovery-simulation.yml',
   ]) {
     assert.ok(workflowNames.includes(expected), `${expected} must exist`);
@@ -34,15 +35,25 @@ test('every simulation is manual and has no automatic trigger', async () => {
   }
 });
 
-test('every simulation is read-only, explicitly confirmed and delayed', async () => {
+test('every simulation is read-only and delegates to the evidence-producing mock engine', async () => {
   for (const { name, content } of await loadWorkflows()) {
     assert.match(content, /^permissions:\n\s{2}contents: read$/m, `${name} must have read-only repository access`);
     assert.doesNotMatch(content, /id-token:\s*write/, `${name} must not request a cloud identity token`);
 
     if (!['disaster-recovery-simulation.yml', 'simulate-full-recovery.yml'].includes(name)) {
-      assert.match(content, /confirmation must equal SIMULATE/, `${name} must fail closed without confirmation`);
-      assert.match(content, /sleep 3/, `${name} must model an operation delay`);
+      assert.match(content, /DR_CONFIRMATION: \$\{\{ inputs\.confirmation \}\}/, `${name} must pass confirmation through env`);
+      assert.match(content, /node scripts\/simulate-(?:recovery|ai-provider)\.mjs/, `${name} must use a shared mock engine`);
+      assert.match(content, /actions\/upload-artifact@v4/, `${name} must publish structured evidence`);
+      assert.match(content, /retention-days: 30/, `${name} must define mock evidence retention`);
     }
+  }
+});
+
+test('simulation workflows declare explicit ordered phases', async () => {
+  for (const { name, content } of await loadWorkflows()) {
+    if (name === 'disaster-recovery-simulation.yml' || name === 'simulate-full-recovery.yml') continue;
+    assert.match(content, /^\s+DR_SCENARIO: [a-z-]+$/m, `${name} must identify its scenario`);
+    assert.match(content, /^\s+DR_PHASES: [a-z0-9,-]+$/m, `${name} must define phases`);
   }
 });
 
@@ -64,6 +75,14 @@ test('every executable component pins the required Node.js runtime', async () =>
   }
 });
 
+test('all Node setup steps pin exactly Node.js 26.6.0', async () => {
+  for (const { name, content } of await loadWorkflows()) {
+    for (const match of content.matchAll(/node-version:\s*([^\s}]+)/g)) {
+      assert.equal(match[1], '26.6.0', `${name} must not use a floating Node.js version`);
+    }
+  }
+});
+
 test('the main workflow conditionally routes every scenario', async () => {
   const workflows = await loadWorkflows();
   const main = workflows.find(({ name }) => name === 'disaster-recovery-simulation.yml')?.content;
@@ -77,6 +96,7 @@ test('the main workflow conditionally routes every scenario', async () => {
     'database-recovery',
     'gke-recovery',
     'flux-bootstrap',
+    'ai-analysis',
   ]) {
     assert.match(main, new RegExp(`inputs\\.scenario == '${scenario}'`));
   }

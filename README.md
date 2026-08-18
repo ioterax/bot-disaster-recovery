@@ -1,140 +1,143 @@
-# Disaster Recovery Bot
+# StormHarbor
 
-[![Terraform drift simulation](https://github.com/ioterax/bot-disaster-recovery/actions/workflows/simulate-terraform-drift.yml/badge.svg)](https://github.com/ioterax/bot-disaster-recovery/actions/workflows/simulate-terraform-drift.yml)
-[![Main DR simulation](https://github.com/ioterax/bot-disaster-recovery/actions/workflows/disaster-recovery-simulation.yml/badge.svg)](https://github.com/ioterax/bot-disaster-recovery/actions/workflows/disaster-recovery-simulation.yml)
-[![IAM recovery simulation](https://github.com/ioterax/bot-disaster-recovery/actions/workflows/simulate-iam-recovery.yml/badge.svg)](https://github.com/ioterax/bot-disaster-recovery/actions/workflows/simulate-iam-recovery.yml)
-[![Database recovery simulation](https://github.com/ioterax/bot-disaster-recovery/actions/workflows/simulate-database-recovery.yml/badge.svg)](https://github.com/ioterax/bot-disaster-recovery/actions/workflows/simulate-database-recovery.yml)
-[![GKE recovery simulation](https://github.com/ioterax/bot-disaster-recovery/actions/workflows/simulate-gke-recovery.yml/badge.svg)](https://github.com/ioterax/bot-disaster-recovery/actions/workflows/simulate-gke-recovery.yml)
-[![Full recovery simulation](https://github.com/ioterax/bot-disaster-recovery/actions/workflows/simulate-full-recovery.yml/badge.svg)](https://github.com/ioterax/bot-disaster-recovery/actions/workflows/simulate-full-recovery.yml)
-[![Last commit](https://img.shields.io/github/last-commit/ioterax/bot-disaster-recovery)](https://github.com/ioterax/bot-disaster-recovery/commits/develop)
-[![Issues](https://img.shields.io/github/issues/ioterax/bot-disaster-recovery)](https://github.com/ioterax/bot-disaster-recovery/issues)
+[![DR simulation](https://github.com/ferreiraad/disaster-recovery-control-plane/actions/workflows/disaster-recovery-simulation.yml/badge.svg)](https://github.com/ferreiraad/disaster-recovery-control-plane/actions/workflows/disaster-recovery-simulation.yml)
+[![Documentation](https://img.shields.io/badge/docs-MkDocs-526CFE)](docs/index.md)
+[![Status](https://img.shields.io/badge/status-safe%20simulation-0B7285)](#estado-do-projeto)
 
-Plug-and-play IT Service Continuity Management (ITSCM) and Disaster Recovery as Code for GitHub organizations, Terraform, Google Cloud and FluxCD.
+**Disaster Recovery Control Plane** para descobrir dependências, avaliar continuamente a capacidade de recuperação e orquestrar Disaster Recovery em GitHub, Terraform, Google Cloud e Kubernetes.
 
-> Status: architecture and safe simulation scaffold. The current workflows model recovery phases but intentionally make no cloud, IAM, Terraform or Kubernetes changes.
+O produto aplica um **Federated Source of Truth (FSoT)**: cada sistema continua autoritativo no seu domínio; o control plane descobre, normaliza, correlaciona e reconcilia essas fontes em uma visão única de readiness, RTO, RPO, planos, execuções e evidências.
 
-Runtime: **Node.js 26.6.0**, pinned consistently in `.nvmrc`, `.node-version`, `package.json` and GitHub Actions.
+## O problema que resolve
 
-## Purpose
+Planos de DR costumam estar separados da infraestrutura real. Repositórios descrevem intenção, APIs mostram o estado observado, backups vivem em outro domínio e evidências de teste ficam dispersas. O resultado é uma pergunta difícil de responder: **este serviço pode ser recuperado agora, dentro do RTO e RPO acordados?**
 
-The Disaster Recovery Bot is intended to be installed as a GitHub App in an organization. It discovers explicitly authorized Terraform and GitOps repositories, builds a recovery plan, detects infrastructure drift, protects IAM recovery data and periodically proves that the recovery path works in a disposable Google Cloud project.
+O Disaster Recovery Control Plane conecta essas informações sem substituir suas fontes originais:
 
-The target recovery order is:
+| Domínio | Fonte autoritativa | Responsabilidade do control plane |
+| --- | --- | --- |
+| Política e plano de DR | repositório DR | validar, versionar e aprovar |
+| Infraestrutura desejada | repositório Terraform | correlacionar módulos, planos e revisões |
+| Estado Terraform | backend remoto | verificar disponibilidade, lineage e drift |
+| Estado desejado Kubernetes | repositório GitOps | resolver a revisão imutável de recuperação |
+| Estado real de cloud | APIs GCP / Cloud Asset Inventory | descobrir assets e relações |
+| Estado real Kubernetes | Kubernetes API | reconciliar CRDs, workloads e saúde |
+| Segredos | Secret Manager + KMS | guardar apenas referências e usar identidade efêmera |
+| Evidências | storage externo e imutável | assinar, reter e consultar |
+| Índice operacional | PostgreSQL | materializar inventário, grafo, runs e métricas |
 
-```text
-GitHub App installation
-        │
-        ├── Terraform repository ──► state/drift inspection
-        └── GitOps repository ─────► desired cluster state
-                                      │
-Encrypted IAM snapshot ───────────────┤
-                                      ▼
-GCP foundation ► IAM ► Terraform ► cluster ► FluxCD ► workloads ► evidence
-```
+## Arquitetura em uma frase
 
-## Core capabilities
-
-- Monitor an allowlist of Terraform and GitOps repositories.
-- Run read-only Terraform plans and classify deleted or changed resources.
-- Recreate GCP foundations that Terraform cannot recover after project loss.
-- Back up declarative IAM policies, bindings, service accounts and Workload Identity configuration.
-- Encrypt IAM snapshots with Cloud KMS and store them in a machine-only Secret Manager vault.
-- Bootstrap FluxCD and reconcile workloads from their Git source of truth.
-- Simulate isolated failure scenarios and collect RTO, RPO and recovery evidence.
-- Enable capabilities per organization through explicit feature toggles.
-
-## Security model
-
-The repository is the desired-state source, not a place for credentials. Configuration files contain resource identifiers and secret references only.
-
-- Prefer GitHub OIDC and GCP Workload Identity Federation over service-account keys.
-- Never export private keys as part of an IAM snapshot.
-- Grant the recovery identity only the permissions required for the current phase.
-- Encrypt every snapshot with a dedicated KMS key and verify its digest before restoration.
-- Deny routine human access to the vault. Emergency access must be a separately audited, time-bound break-glass process.
-- Run destructive tests only in allowlisted disposable projects carrying the configured simulation label.
-- Require GitHub Environment approval before real recovery; simulations remain isolated and non-destructive by default.
-
-Secret Manager is suitable for compact IAM snapshots. If snapshots exceed its payload limit, the planned implementation should use a KMS-encrypted, versioned and retention-locked object in Cloud Storage, with only its digest and object reference stored in Secret Manager.
-
-## Configuration
-
-Use [`config/dr.config.example.yaml`](config/dr.config.example.yaml) as the versioned plan and validate it against [`config/dr.config.schema.json`](config/dr.config.schema.json). The rationale and configuration hierarchy are described in [`docs/configuration.md`](docs/configuration.md).
-
-The recommended precedence is:
+O **control plane externo ao cluster recuperável** coordena discovery, inventário, políticas e recovery; o **Operator dentro do Kubernetes** reconcilia somente recursos Kubernetes por meio de CRDs.
 
 ```text
-schema defaults < repository dr.config.yaml < GitHub App installation settings
-                < runtime environment overrides < secret values from the vault
+Federated Sources          DR Control Plane              Recovery targets
+GitHub / TF Backend  ───►  Discover + Correlate   ───►  GCP foundation
+GCP / Kubernetes API ───►  Policy + ITSCM         ───►  Terraform
+Vault / Evidence      ───►  Orchestrate + Prove   ───►  GKE + DR Operator
 ```
 
-Feature toggles are deny-by-default. Enabling a feature does not grant cloud permissions; both the toggle and the corresponding workload identity policy must allow the operation.
+Essa separação evita o paradoxo de hospedar o cérebro da recuperação dentro do cluster que ele precisa reconstruir.
 
-## Local runtime
+## Capacidades do produto
 
-Install and select Node.js 26.6.0, then verify the pin:
+- onboarding por GitHub App com repositórios explicitamente autorizados;
+- inventário de serviços, owners, ambientes, assets e dependências;
+- mapeamento de criticidade, RTO, RPO, recovery tier e plano por serviço;
+- discovery GCP-first por APIs e Cloud Asset Inventory;
+- detecção read-only de drift Terraform e correlação com o backend remoto;
+- integração GitOps para restaurar FluxCD e workloads em revisão imutável;
+- CRDs para planos, targets e execuções Kubernetes;
+- Operator Kubernetes com control loops idempotentes e status observável;
+- simulações isoladas com guardrails, health gates e cleanup obrigatório;
+- evidências estruturadas de cada fase e score de recovery readiness;
+- arquitetura de adapters preparada para AWS, Azure e outros engines GitOps.
+- AI providers configuráveis para Codex Cloud e Gemini, com tiers, reasoning level, tipos de tarefa, redaction e revisão humana.
+
+## Fluxo de recuperação
+
+```text
+preflight → foundation → IAM → Terraform → database → GKE
+          → Operator/CRDs → FluxCD → workloads → validation → evidence
+```
+
+Cada transição depende de um health gate. Falha, timeout, violação de policy ou kill switch interrompe novas mutações; cleanup e coleta de evidência continuam.
+
+## Estado do projeto
+
+O repositório é um **scaffold de arquitetura e simulação segura**. As pipelines atuais:
+
+- são executadas apenas manualmente com confirmação literal `SIMULATE`;
+- mantêm `contents: read` e não solicitam token OIDC de cloud;
+- validam targets descartáveis, RPO e caminhos recebidos;
+- executam um motor de mock determinístico por fases;
+- produzem evidência JSON e Job Summary;
+- simulam seleção de provider/modelo de IA sem ler credenciais ou chamar APIs;
+- não autenticam na GCP, não executam Terraform e não alteram Kubernetes.
+
+Isso permite evoluir contratos, guardrails e observabilidade antes de habilitar operações reais.
+
+## Executar localmente
+
+O runtime está fixado em **Node.js 26.6.0**.
 
 ```bash
 nvm install
 nvm use
 node --run check:runtime
-```
-
-The project currently has no production dependencies. Run the Disaster Recovery guardrail tests with:
-
-```bash
 node --run test:disaster-recovery
 ```
 
-They verify that simulations stay manual and non-privileged, dangerous feature toggles default to disabled, private IAM keys are excluded and recovery phases remain in dependency order.
+Para simular localmente sem acesso externo:
 
-## Manual simulation workflows
+```bash
+DR_CONFIRMATION=SIMULATE \
+DR_SCENARIO=terraform-drift \
+DR_PHASES=immutable-source,backend-init,refresh-only-plan,classify,policy-evaluation \
+DR_TERRAFORM_SCENARIO=resource-deleted \
+node scripts/simulate-recovery.mjs
+```
 
-Every public entrypoint is manual through `workflow_dispatch` and requires the literal confirmation `SIMULATE`. Specialized workflows also expose `workflow_call`, allowing the main workflow and the full-recovery workflow to compose them without duplicating recovery logic. They use `sleep 3` to represent real operations while the implementation is still a harmless scaffold.
+## Documentação para clientes
 
-| Workflow                           | Scenario                    | Simulated phases                                                       |
-| ---------------------------------- | --------------------------- | ---------------------------------------------------------------------- |
-| `disaster-recovery-simulation.yml` | Main scenario router        | selects one conditional path and delegates it                          |
-| `simulate-terraform-drift.yml`     | Terraform resource deletion | checkout, init, plan, classify and report                              |
-| `simulate-gcp-project-loss.yml`    | GCP project loss            | guardrails, foundation, APIs, state and handoff                        |
-| `simulate-iam-recovery.yml`        | IAM backup and restore      | discover, redact, encrypt, verify and restore                          |
-| `simulate-database-recovery.yml`   | Database loss/corruption    | select recovery point, restore to a new instance and validate data     |
-| `simulate-gke-recovery.yml`        | GKE cluster loss            | network, cluster, identity, policy, FluxCD and workload health         |
-| `simulate-flux-bootstrap.yml`      | Kubernetes/FluxCD loss      | cluster readiness, bootstrap, reconcile and health                     |
-| `simulate-full-recovery.yml`       | Full project loss           | project, IAM, Terraform, database, GKE, FluxCD, workloads and evidence |
+O portal MkDocs contém visão executiva, diagramas, arquitetura, modelo federado, inventário, ITSCM, segurança, CRDs/Operator, pipelines e roadmap.
 
-Run one from **Actions → select workflow → Run workflow**. Use only synthetic, non-sensitive data. These simulations do not authenticate to GCP and do not invoke Terraform or FluxCLIs.
+```bash
+./scripts/serve-docs.sh
+```
 
-The recommended entrypoint is **Disaster Recovery - Main**. A full project-loss run composes the specialized workflows in dependency order; a focused run calls only the selected component. Each specialized workflow remains directly runnable for diagnosis and acceptance testing.
+O script cria/reutiliza `.venv-docs`, instala as versões travadas de MkDocs e inicia o servidor. Argumentos adicionais são encaminhados ao `mkdocs serve`.
 
-## Roadmap
+Abra `http://127.0.0.1:8000`. O menu lateral possui seções recolhíveis e um botão burger persistente também em desktop.
 
-1. GitHub App manifest, installation onboarding and repository allowlisting.
-2. Configuration loader, schema validation and feature-toggle evaluation.
-3. Read-only Terraform drift engine with signed evidence.
-4. IAM snapshotter with envelope encryption, retention and integrity checks.
-5. GCP foundation recovery and FluxCD bootstrap adapters.
-6. Disposable-project scenario runner, RTO/RPO metrics and scheduled execution.
-7. Approval-gated real recovery runbooks and compliance reporting.
+- [Início da documentação](docs/index.md)
+- [Arquitetura do control plane](docs/architecture/control-plane.md)
+- [XML editável do draw.io](docs/assets/diagrams/control-plane.drawio.xml)
+- [CRDs e Operator](docs/kubernetes/crds-and-operator.md)
+- [Pipelines de simulação](docs/operations/pipelines.md)
+- [Plano de configuração](config/dr.config.example.yaml)
 
-Periodic schedules are deliberately deferred until the simulations have isolation controls, cleanup, budget limits and an emergency stop. The manual workflows are the acceptance harness for those controls.
+## Guardrails essenciais
 
-## Recovery guardrails
+- identidade efêmera via GitHub OIDC e Workload Identity Federation;
+- nenhuma chave privada em snapshots, repositórios ou evidências;
+- targets reais sujeitos a approval environment e política organizacional;
+- fonte imutável, allowlist, labels descartáveis e limites de custo/mudança;
+- restauração de banco sempre em nova instância;
+- control plane e evidence store fora do failure domain recuperado;
+- feature flag nunca substitui autorização ou policy;
+- toda mutação deve ser idempotente, auditável e interrompível.
 
-The example plan codifies fail-closed defaults: allowlisted disposable projects, immutable source revisions, zero permitted deletions during simulation, change and cost ceilings, mandatory cleanup, signed evidence, a kill switch, and no organization/folder IAM changes. Database restores cannot overwrite their source, and GKE recovery requires a private endpoint and Workload Identity.
+## Próximos marcos
 
-Real implementations should evaluate these controls before obtaining a cloud token and again before each mutation. A feature toggle can never bypass a guardrail.
+1. GitHub App, onboarding e política de instalação.
+2. Inventory API e PostgreSQL com grafo de dependências.
+3. Discovery adapters para GitHub, Terraform, GCP e Kubernetes.
+4. CRDs `DisasterRecoveryPlan`, `RecoveryTarget` e `RecoveryRun`.
+5. Operator Kubernetes e orchestrator externo com filas duráveis.
+6. Simulações em projeto descartável e evidence store imutável.
+7. Recovery real com aprovação, break-glass e auditoria.
 
-## Repository metadata
+## Contribuição
 
-Suggested GitHub description:
-
-> Plug-and-play ITSCM and Disaster Recovery as Code for Terraform, GCP, IAM and FluxCD.
-
-Suggested topics/keywords:
-
-`itscm`, `disaster-recovery`, `business-continuity`, `terraform`, `gcp`, `iam`, `fluxcd`, `gitops`, `github-app`, `infrastructure-as-code`, `rto`, `rpo`, `chaos-engineering`
-
-## Contributing
-
-Changes must preserve least privilege, isolation and auditability. A pull request that introduces a real cloud operation should include its threat model, required permissions, rollback behavior and a disposable-environment test plan.
+Mudanças com operação real devem documentar threat model, permissões mínimas, idempotência, rollback, kill switch, evidências esperadas e plano de teste em ambiente descartável.
